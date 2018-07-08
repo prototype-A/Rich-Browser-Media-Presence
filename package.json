@@ -1,9 +1,9 @@
 {
 	"name": "Rich Chrome Youtube Presence",
-	"version": "0.1.0",
-	"description": "",
+	"version": "0.2.0",
+	"description": "Rich YouTube playing presence on your desktop Discord client",
 	"keywords": [],
-	"author": "",
+	"author": "prototype-A",
 	"license": "",
 	"dependencies": {
 		"body-parser": "^1.18.3",

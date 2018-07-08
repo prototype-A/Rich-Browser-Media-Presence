@@ -1,6 +1,6 @@
 {
 	"name": "Rich Chrome Youtube Presence",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "",
 	"author": "prototype-A",
 	"manifest_version": 2,
@@ -8,9 +8,8 @@
 		"default_icon": "./img/icon_red.png",
 		"default_popup": "popup.html"
 	},
-	"content_scripts": [
-	{
-		"matches": ["https://www.youtube.com/watch?v=*"],
+	"content_scripts": [{
+		"matches": ["*://www.youtube.com/watch?v=*"],
 		"js": ["./scripts/video_script.js"]
 	}],
 	"background": {

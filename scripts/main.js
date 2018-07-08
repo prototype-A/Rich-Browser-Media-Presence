@@ -1,66 +1,37 @@
 const SERVER = 'localhost';
 const PORT = 8080;
 var xhr = new XMLHttpRequest();
-var mediaInfo = { title: '', creator: '', position: 0, duration: 0, state: '' };
-var count = 0;
 
-function sendParams() {
-	console.log(`${mediaInfo.playing} ${mediaInfo.title} by ${mediaInfo.creator}  [${mediaInfo.position}:${mediaInfo.duration}]`);
+
+function sendParam(param, value) {
 	xhr.open('POST', `http://${SERVER}:${PORT}/`);
 	xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-	xhr.send(`title=${mediaInfo.title}&creator=${mediaInfo.creator}&pos=${mediaInfo.position}&dur=${mediaInfo.duration}&state=${mediaInfo.state}`);
-	mediaInfo.title = '';
-	mediaInfo.creator = '';
-	mediaInfo.position = 0;
-	mediaInfo.duration = 0;
-	mediaInfo.state = '';
+	xhr.send(`param=${param}&value=${value}`);
 }
 
 function getParams(tab) {
-	chrome.tabs.sendMessage(tab, 'state');
-	chrome.tabs.sendMessage(tab, 'position');
-	chrome.tabs.sendMessage(tab, 'duration');
-	chrome.tabs.sendMessage(tab, 'creator');
+	sendParam('videoId', getVideoId(tab.url));
 }
 
 // Listen for messages from content script injected into video tab
 chrome.runtime.onMessage.addListener((req) => {
 	console.log(`Request: ${req}`);
-	param = req.substring(0, req.indexOf(':'));
-	value = req.substring(req.indexOf(':') + 1, req.length + 1);
-	mediaInfo[param] = value;
-	// Make sure we have all info returned
-	count++;
-	if (count >= 4) {
-		count = 0;
-		sendParams();
-	}
+	param = req.substring(0, req.indexOf('='));
+	value = req.substring(req.indexOf('=') + 1, req.length + 1);
+	sendParam(param, value);
 });
 
 // Check for first-most YouTube tab whenever user navigates to a page
-chrome.webNavigation.onCompleted.addListener((details) => {
-	if (document.readyState == 'load') {
-		console.log('Page loaded');
-	}
-	if (details.url.startsWith("https://www.youtube.com/watch?v=")) {
-		chrome.tabs.get(details.tabId, (tab) => {
-			//console.log("User is now listening to " + tab.title.replace(" - YouTube", ""));
-			mediaInfo.title = tab.title.replace(" - YouTube", "");
-			getParams(details.tabId);
-		});
-	}
+chrome.webNavigation.onCompleted.addListener(() => {
+	//findYoutubeTab();
 });
 
+// YouTube uses pushState-based navigation which doesn't trigger most
+// web navigation events unless it's a page refresh
 chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
-	if (document.readyState == 'load') {
-		console.log('Page loaded');
-	}
 	if (details.url.startsWith("https://www.youtube.com/watch?v=")) {
-		//console.log('Video changed');
 		chrome.tabs.get(details.tabId, (tab) => {
-			//console.log("User is now listening to " + tab.title.replace(" - YouTube", ""));
-			mediaInfo.title = tab.title.replace(" - YouTube", "");
-			getParams(details.tabId);
+			getParams(details);
 		});
 	}
 });
@@ -70,11 +41,41 @@ chrome.tabs.onMoved.addListener((tabId, moveInfo) => {
 	chrome.windows.getLastFocused({populate: true}, (window) => {
 		for (var i = 0; i <= moveInfo.toIndex; i++) {
 			if (window.tabs[i].url.startsWith("https://www.youtube.com/watch?v=")) {
-				//console.log("Now listening to " + window.tabs[i].title.replace(" - YouTube", ""));
-				mediaInfo.title = window.tabs[i].title.replace(" - YouTube", "");
-				getParams(window.tabs[i].id);
+				getParams(window.tabs[i]);
 				break;
 			}
 		}
 	});
 });
+
+// Check for first-most YouTube tab when a tab is closed
+chrome.tabs.onRemoved.addListener(() => {
+	//findYoutubeTab();
+});
+
+function getVideoId(url) {
+	var extra = url.indexOf('&');
+	if (extra != -1) {
+		return url.substring(url.indexOf('v=') + 2, extra + 1);
+	} else {
+		return url.substring(url.indexOf('v=') + 2, url.length + 1);
+	}
+}
+
+function findYoutubeTab() {
+	chrome.windows.getLastFocused({populate: true}, (window) => {
+		var tabFound = false;
+		for (var i = 0; i <= window.tabs.length; i++) {
+			try {
+				if (window.tabs[i].url.startsWith("https://www.youtube.com/watch?v=")) {
+					tabFound = true;
+					getParams(window.tabs[i]);
+					break;
+				}
+			} catch (e) {}
+		}
+		if (!tabFound) {
+			console.log('No YouTube tab found');
+		}
+	});
+}
