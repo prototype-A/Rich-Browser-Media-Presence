@@ -1,0 +1,25 @@
+.status-bad {
+	color: red;
+	font-size: 0.9em;
+	font-weight: bold;
+}
+
+.status-good {
+	color: green;
+	font-size: 0.9em;
+	font-weight: bold;
+}
+
+.onOffBtn {
+	text-align: center;
+}
+
+.popup-body {
+	font-size: 2em;
+	min-width: 12em;
+	text-align: center;
+}
+
+.currently-playing-text {
+	font-size: 0.6em;
+}
