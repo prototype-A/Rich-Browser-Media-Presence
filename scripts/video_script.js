@@ -1,60 +1,78 @@
+var connected = false;
+var bgPort = null;
+var mediaStatusFeed = null;
+
+
 // Request port name to establish connection to extension with from this content script
-let port = null;
-let connected = false;
-let supportedUrls = [];
-
-
-chrome.runtime.onMessage.addListener(function(req, sender, res) {
-	let portName = req.portName;
-	supportedUrls = req.supportedUrls
+chrome.runtime.onConnect.addListener((port) => {
 	if (!connected) {
-		port = chrome.runtime.connect({ name: portName });
+		bgPort = port;
 		connected = true;
-		console.log('Connected to port ' + portName);
+		console.log(`Connected to port "${bgPort.name}"`);
+		
+		// Update extension popup
+		bgPort.postMessage({
+			title: getVideoTitle(),
+			chapter: getVideoChapter()
+		});
+		
+		// Send media status to extension every second
+		mediaStatusFeed = setInterval(() => {
+			if (!connected) {
+				clearInterval(mediaStatusFeed);
+				mediaStatusFeed = null;
+			} else {
+				let player = getPlayer();
 
+				if (player) {
+					let position = Math.round(player.currentTime);
+					let duration = Math.round(player.duration);
+					let playingState = (player.paused) ? 'paused': 'playing';
+					
+					bgPort.postMessage({
+						title: getVideoTitle(),
+						chapter: getVideoChapter(),
+						platform: getVideoTitle(),
+						position: position,
+						duration: duration,
+						playingState: playingState,
+						isLive: getVideoLiveStatus()
+					});
+				}
+			}
+		}, 1000);
+		
 		// Stop sending media status after disabling extension
-		port.onDisconnect.addListener(function() {
-			console.log('Disconnected from port ' + portName);
+		bgPort.onDisconnect.addListener(() => {
+			bgPort = null;
 			connected = false;
+			console.log(`Disconnected from port "${portName}`);
 		});
 	}
 });
 
-// Send media status to extension every second
-setInterval(() => {
-	if (connected) {
-		// Check if user has not navigated away from video in this tab
-		if (isSupported(window.location.href)) {
-			// Get YouTube video player
-			ytplayer = document.getElementsByClassName('video-stream')[0];
-			let liveBadge = document.querySelector('.ytp-live-badge');
-			
-			let title = document.title;
-			let position = Math.round(ytplayer.currentTime);
-			let duration = Math.round(ytplayer.duration);
-			let playingState = (ytplayer.paused) ? 'paused': 'playing';
-			let isLive = liveBadge && !liveBadge.getAttribute('disabled');
+// Returns the YT || NND video player element on the page
+function getPlayer() {
+	return document.getElementsByClassName('video-stream')[0] ||
+		document.getElementsByClassName('MainVideoPlayer')[0].firstElementChild;
+}
 
-			port.postMessage({
-				title: title,
-				position: position,
-				duration: duration,
-				playingState: playingState,
-				isLive: isLive
-			});
-		} else {
-			port.postMessage(null);
-		}
-	}
-}, 1000);
+// Returns the title of the video
+function getVideoTitle() {
+	return document.title;
+}
 
-// Checks if url of tab is (still) a supported site
-function isSupported(url) {
-	for (let i = 0; i < supportedUrls.length; i++) {
-		if (url.startsWith(supportedUrls[i])) {
-			return true;
-		}
-	}
+// Returns the current chapter of the video
+function getVideoChapter() {
+	// YouTube
+	let chapter = document.querySelector('.ytp-chapter-title-content');
+	let chapterIsVisible = (chapter) ? window.getComputedStyle(chapter.parentElement.parentElement).display !== 'none' : false;
+	return (chapter && chapterIsVisible) ? chapter.textContent : null;
+}
 
-	return false;
+// Returns whether the video is currently live-streamed or not
+function getVideoLiveStatus() {
+	// YouTube
+	let liveBadge = document.querySelector('.ytp-live-badge');
+	return liveBadge && !liveBadge.getAttribute('disabled');
 }

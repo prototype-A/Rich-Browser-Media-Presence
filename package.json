@@ -1,13 +1,14 @@
 {
-	"name": "Rich Chrome Youtube Presence",
-	"version": "0.3.0",
-	"description": "Rich YouTube presence on your desktop Discord client",
+	"name": "rich-browser-media-presence",
+	"version": "1.0.0",
+	"description": "Displays browser media as rich presence on your desktop Discord client",
 	"keywords": [],
 	"author": "prototype-A",
 	"license": "",
+	"private": true,
 	"dependencies": {
 		"cors": "^2.8.5",
 		"discord-rich-presence": "^0.0.8",
-		"express": "^4.16.3"
+		"express": "^4.17.1"
 	}
 }

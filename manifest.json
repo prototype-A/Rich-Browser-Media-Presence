@@ -1,15 +1,26 @@
 {
-	"name": "Rich Chrome Youtube Presence",
-	"version": "0.3.0",
-	"description": "",
+	"name": "Rich Browser Media Presence",
+	"description": "Displays browser media as rich presence on your desktop Discord client",
+	"version": "1.0.0",
 	"author": "prototype-A",
 	"manifest_version": 2,
-	"browser_action": {
-		"default_icon": "./img/icon_red.png",
-		"default_popup": "./public/html/popup.html"
-	},
 	"background": {
-		"scripts": ["./scripts/background.js"]
+		"page": "/popup/background.html"
 	},
-	"permissions": ["activeTab", "tabs", "https://www.youtube.com/watch?v=*"]
+	"browser_action": {
+		"browser_style": true,
+		"default_icon": "/icons/icon_red.png",
+		"default_popup": "/popup/popup.html"
+	},
+	"icons": {
+		"48": "/icons/icon_red.png",
+		"96": "/icons/icon_red.png"
+	},
+	"permissions": [
+		"activeTab",
+		"tabs",
+		"webNavigation",
+		"https://www.youtube.com/watch?v=*",
+		"https://www.nicovideo.jp/watch/sm*"
+	]
 }

@@ -1,3 +1,9 @@
+.popup-body {
+	font-size: 2em;
+	min-width: 12em;
+	text-align: center;
+}
+
 .status-bad {
 	color: red;
 	font-size: 0.9em;
@@ -10,16 +16,10 @@
 	font-weight: bold;
 }
 
-.onOffBtn {
+#onOffBtn {
 	text-align: center;
 }
 
-.popup-body {
-	font-size: 2em;
-	min-width: 12em;
-	text-align: center;
-}
-
-.currently-playing-text {
+#playingStatus {
 	font-size: 0.6em;
 }

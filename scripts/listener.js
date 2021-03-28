@@ -1,17 +1,26 @@
 const CLIENT_ID = '427263043941171211';
 const CLIENT = require('discord-rich-presence')(CLIENT_ID);
-const SERVER = 'localhost';
-const PORT = 8080;
 
+var SERVER = 'localhost';
+var PORT = 8080;
 var express = require('express');
 var cors = require('cors');
 var app = express();
 
-let currMediaInfo = { title: '', platform: '', position: 0, duration: 0, state: 'stopped', isLive: false };
+
+var currMediaInfo = {
+	title: '',
+	chapter: null,
+	platform: '',
+	position: 0,
+	duration: 0,
+	state: 'stopped',
+	isLive: false
+};
 var playback;
 
 
-print('Launching listener');
+console.log('\nLaunching listener');
 
 // CORS to allow connection from "Origin: *"
 app.use(cors());
@@ -21,12 +30,12 @@ app.options('/', cors());
 
 // Handle incoming POST requests from extension
 app.post('/', express.json({ type: '*/*' }), (req, res) => {
-	
 	//console.log(req.body);
 	
 	let newMediaInfo = {
-		title: removePlatform(req.body.title),
-		platform: getPlatform(req.body.title),
+		title: req.body.title,
+		chapter: req.body.chapter,
+		platform: req.body.platform,
 		position: req.body.position,
 		duration: req.body.duration,
 		state: req.body.playingState,
@@ -35,25 +44,21 @@ app.post('/', express.json({ type: '*/*' }), (req, res) => {
 	
 	updateMediaStatus(newMediaInfo);
 	
-	/*
-	res.send({
-		success: true
-	});
-	*/
+	
 	res.end();
 });
 
 // Start listening
 app.listen(PORT, SERVER, () => {
-	print(`Listening at http://${SERVER}:${PORT}`);
+	console.log(`Listening at http://${SERVER}:${PORT}\n`);
 });
 
 // Handle updating status
 function updateMediaStatus(newMediaInfo) {
-
 	let now = getNow();
+	let formattedTitle = formatPlayingTitle(newMediaInfo);
 	
-	if (newMediaInfo == null) {
+	if (newMediaInfo === null) {
 		// Stopped
 		updatePresence({
 			details: currMediaInfo.title,
@@ -61,30 +66,26 @@ function updateMediaStatus(newMediaInfo) {
 			smallImageText: 'Stopped',
 			instance: false,
 		});
-	} else if (currMediaInfo.state != newMediaInfo.state &&
-		currMediaInfo.title == newMediaInfo.title) {
+	} else if (currMediaInfo.state !== newMediaInfo.state && currMediaInfo.title === newMediaInfo.title) {
 		// Ignore 'paused' state when queueing next song
-		if (newMediaInfo.position != newMediaInfo.duration &&
-			newMediaInfo.state == 'paused') {
+		if (newMediaInfo.position !== newMediaInfo.duration && newMediaInfo.state === 'paused') {
 			// Playback paused
 			currMediaInfo = newMediaInfo;
 			pausePlayback();
-			print(`Paused:【${currMediaInfo.title}】`);
+			console.log(`Paused:【${formatPlayingTitle(currMediaInfo)}】 on ${currMediaInfo.platform}`);
 			
 			updatePresence({
-				details: currMediaInfo.title,
+				details: formattedTitle,
 				state: `on ${currMediaInfo.platform}`,
-				largeImageKey: currMediaInfo.platform.toLowerCase(),
-				largeImageText: currMediaInfo.platform,
 				smallImageKey: 'paused',
 				smallImageText: 'Paused',
 				instance: true,
 			});
-		} else if (newMediaInfo.state == 'playing') {
+		} else if (newMediaInfo.state === 'playing') {
 			// Playback resumed
 			currMediaInfo = newMediaInfo;
 			startPlayback();
-			print(`Resumed:【${currMediaInfo.title}】`);
+			console.log(`Resumed:【${formatPlayingTitle(currMediaInfo)}】 on ${currMediaInfo.platform}`);
 			
 			if (currMediaInfo.isLive) {
 				// Listening live
@@ -93,8 +94,6 @@ function updateMediaStatus(newMediaInfo) {
 					state: `on ${currMediaInfo.platform}`,
 					startTimestamp: now,
 					endTimestamp: now + currMediaInfo.duration,
-					largeImageKey: currMediaInfo.platform.toLowerCase(),
-					largeImageText: currMediaInfo.platform,
 					smallImageKey: 'listeninglive',
 					smallImageText: 'Listening Live',
 					instance: true,
@@ -102,51 +101,46 @@ function updateMediaStatus(newMediaInfo) {
 			} else {
 				// Regular video
 				updatePresence({
-					details: currMediaInfo.title,
+					details: formattedTitle,
 					state: `on ${currMediaInfo.platform}`,
 					startTimestamp: now,
 					endTimestamp: now + currMediaInfo.duration - currMediaInfo.position,
-					largeImageKey: currMediaInfo.platform.toLowerCase(),
-					largeImageText: currMediaInfo.platform,
 					smallImageKey: 'playing',
 					smallImageText: 'Playing',
 					instance: true,
 				});
 			}
 		}
-	} else if (currMediaInfo.title != newMediaInfo.title || 
-				currMediaInfo.platform != newMediaInfo.platform ||
-				(currMediaInfo.duration != newMediaInfo.duration &&
-				currMediaInfo.title != newMediaInfo.title)) {
-		// New video
+	} else if (currMediaInfo.title !== newMediaInfo.title ||
+				currMediaInfo.chapter !== newMediaInfo.chapter || 
+				currMediaInfo.platform !== newMediaInfo.platform ||
+				(currMediaInfo.duration !== newMediaInfo.duration &&
+				currMediaInfo.title !== newMediaInfo.title)) {
+		// New video/chapter
 		if (newMediaInfo.live) {
 			// Listening live
 			currMediaInfo = newMediaInfo;
 			currMediaInfo.position = 0;
 			currMediaInfo.duration = -1;
-			print(`Now listening live to:【${currMediaInfo.title}】`);
+			console.log(`Now listening live to:【${currMediaInfo.title}】 on ${currMediaInfo.platform}`);
 			
 			updatePresence({
 				details: currMediaInfo.title,
 				state: `on ${currMediaInfo.platform}`,
 				startTimestamp: now,
-				largeImageKey: currMediaInfo.platform.toLowerCase(),
-				largeImageText: currMediaInfo.platform,
 				smallImageKey: 'listeninglive',
 				smallImageText: 'Listening Live',
 				instance: true,
 			});
-		} else if (newMediaInfo.state == 'playing') {
+		} else if (newMediaInfo.state === 'playing') {
 			currMediaInfo = newMediaInfo;
-			print(`Now listening to:【${currMediaInfo.title}】`);
+			console.log(`Now listening to:【${formattedTitle}】 on ${currMediaInfo.platform}`);
 			
 			updatePresence({
-				details: currMediaInfo.title,
+				details: formattedTitle,
 				state: `on ${currMediaInfo.platform}`,
 				startTimestamp: now,
 				endTimestamp: now + currMediaInfo.duration - currMediaInfo.position,
-				largeImageKey: currMediaInfo.platform.toLowerCase(),
-				largeImageText: currMediaInfo.platform,
 				smallImageKey: 'playing',
 				smallImageText: 'Playing',
 				instance: true,
@@ -154,21 +148,19 @@ function updateMediaStatus(newMediaInfo) {
 		}
 		
 		startPlayback();
-	} else if (currMediaInfo.title == newMediaInfo.title &&
+	} else if (currMediaInfo.title === newMediaInfo.title &&
 				Math.abs(currMediaInfo.position - newMediaInfo.position) >= 3) {
 		// Update playback position after seeking
 		currMediaInfo.position = newMediaInfo.position;
 		let mm = Math.floor(newMediaInfo.position / 60);
 		let ss = (newMediaInfo.position % 60).toLocaleString('en-US', { minimumIntegerDigits: 2, useGrouping:false });
-		print(`Seek 【${currMediaInfo.title}】 to ${mm}:${ss}`);
+		console.log(`Seek 【${currMediaInfo.title}】 on ${currMediaInfo.platform} to ${mm}:${ss}`);
 		
 		updatePresence({
-			details: currMediaInfo.title,
+			details: formattedTitle,
 			state: `on ${currMediaInfo.platform}`,
 			startTimestamp: now,
 			endTimestamp: now + currMediaInfo.duration - newMediaInfo.position,
-			largeImageKey: currMediaInfo.platform.toLowerCase(),
-			largeImageText: currMediaInfo.platform,
 			smallImageKey: currMediaInfo.state,
 			smallImageText: currMediaInfo.state,
 			instance: true,
@@ -178,12 +170,24 @@ function updateMediaStatus(newMediaInfo) {
 
 // Update rich presence on Discord client
 function updatePresence(presence) {
+	presence.largeImageText = currMediaInfo.platform;
+	presence.largeImageKey = currMediaInfo.platform.toLowerCase();
+	
 	CLIENT.updatePresence(presence);
 };
 
-// Start updating playback position
+// Formats the title of the playing media to be displayed
+function formatPlayingTitle(mediaInfo) {
+	if (mediaInfo.chapter) {
+		return `${mediaInfo.chapter} - ${mediaInfo.title}`;
+	}
+	
+	return `${mediaInfo.title}`;
+}
+
+// Start updating playback position locally
 function startPlayback() {
-	if (playback == null || playback == undefined) {
+	if (!playback) {
 		playback = setInterval(() => {
 			if (currMediaInfo.position < currMediaInfo.duration) {
 				currMediaInfo.position++;
@@ -196,36 +200,6 @@ function startPlayback() {
 function pausePlayback() {
 	clearInterval(playback);
 	playback = null;
-}
-
-const URL_PLATFORM = [ 'YouTube' ];
-const URL_EXTRA = [ ' - YouTube' ];
-
-// Returns the platform from the title
-function getPlatform(title) {
-	for (let i = 0; i < URL_EXTRA.length; i++) {
-		if (title.endsWith(URL_EXTRA[i])) {
-			return URL_PLATFORM[i];
-		}
-	}
-	
-	return null;
-}
-
-// Removes the platform from the title
-function removePlatform(title) {
-	for (let i = 0; i < URL_EXTRA.length; i++) {
-		if (title.endsWith(URL_EXTRA[i])) {
-			return title.substring(0, title.indexOf(URL_EXTRA[i]));
-		}
-	}
-	
-	return title;
-}
-
-// Print to command line
-function print(message) {
-	console.log(message + '\n');
 }
 
 // Get current epoch time
