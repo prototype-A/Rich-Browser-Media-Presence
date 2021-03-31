@@ -1,5 +1,6 @@
 {
 	"name": "rich-browser-media-presence",
+	"productName": "RichBrowserMediaPresence",
 	"version": "1.0.0",
 	"description": "Displays browser media as rich presence on your desktop Discord client",
 	"keywords": [],
@@ -10,5 +11,11 @@
 		"cors": "^2.8.5",
 		"discord-rich-presence": "^0.0.8",
 		"express": "^4.17.1"
+	},
+	"scripts": {
+		"build-chrome": "powershell -F \"./BuildScript.ps1\" %npm_package_version% -chrome",
+		"build-clean": "powershell -F \"./BuildScript.ps1\" %npm_package_version% -clean",
+		"build-listener": "pkg ./scripts/listener.js --out-path ./build/release/",
+		"build-zip": "powershell -F \"./BuildScript.ps1\" %npm_package_version% -zip"
 	}
 }
