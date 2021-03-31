@@ -93,7 +93,6 @@ function updateMediaStatus(newMediaInfo) {
 					details: currMediaInfo.title,
 					state: `on ${currMediaInfo.platform}`,
 					startTimestamp: now,
-					endTimestamp: now + currMediaInfo.duration,
 					smallImageKey: 'listeninglive',
 					smallImageText: 'Listening Live',
 					instance: true,
@@ -117,7 +116,7 @@ function updateMediaStatus(newMediaInfo) {
 				(currMediaInfo.duration !== newMediaInfo.duration &&
 				currMediaInfo.title !== newMediaInfo.title)) {
 		// New video/chapter
-		if (newMediaInfo.live) {
+		if (newMediaInfo.isLive) {
 			// Listening live
 			currMediaInfo = newMediaInfo;
 			currMediaInfo.position = 0;
@@ -149,7 +148,8 @@ function updateMediaStatus(newMediaInfo) {
 		
 		startPlayback();
 	} else if (currMediaInfo.title === newMediaInfo.title &&
-				Math.abs(currMediaInfo.position - newMediaInfo.position) >= 3) {
+				Math.abs(currMediaInfo.position - newMediaInfo.position) >= 3 &&
+				!currMediaInfo.isLive) {
 		// Update playback position after seeking
 		currMediaInfo.position = newMediaInfo.position;
 		let mm = Math.floor(newMediaInfo.position / 60);
