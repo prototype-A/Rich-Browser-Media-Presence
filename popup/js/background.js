@@ -1,9 +1,9 @@
 const LISTENER_SERVER = 'localhost';
 const LISTENER_PORT = 8080;
 
-const SUPPORTED_URLS = [ 'https://www.youtube.com/watch?v=', 'https://www.nicovideo.jp/watch/sm' ];
-const URL_EXTRA = [ ' - YouTube', ' - ニコニコ動画', ' - Niconico Video', ' - niconico動畫' ];
-const URL_PLATFORM = [ 'YouTube', 'NicoNicoDouga', 'NicoNicoDouga', 'NicoNicoDouga' ];
+const SUPPORTED_URLS = [ 'https://www.youtube.com/watch?v=', 'https://www.nicovideo.jp/watch/sm', 'https://live.nicovideo.jp/watch/lv', 'https://www.bilibili.com/video/', 'https://live.bilibili.com/' ];
+const URL_EXTRA = [ ' - YouTube', ' - ニコニコ動画', ' - Niconico Video', ' - niconico動畫', ' - ニコニコ生放送', '_哔哩哔哩 (゜-゜)つロ 干杯~-bilibili', ' - 哔哩哔哩直播，二次元弹幕直播平台' ];
+const URL_PLATFORM = [ 'YouTube', 'NicoNicoDouga', 'NicoNicoDouga', 'NicoNicoDouga', 'NicoNicoDouga Live', 'BiliBili', 'BiliBili Live' ];
 
 const CS_PORT_NAME = 'RichBrowserMediaPresence';
 var csPort = null;
@@ -58,7 +58,8 @@ function enableRichPresence(callback) {
 					// Re-inject content script if user navigated to a new webpage
 					// using traditional non push-based web browser navigation
 					chrome.webNavigation.onCompleted.addListener((tab) => {
-						console.log(tab.url);
+						//console.log(tab.url);
+						
 						// Only inject if same tab and not a YouTube link
 						// New url will be 'about:blank' when playing the "up next" YouTube video
 						if (tab.tabId === tabId && !(tab.url.startsWith(SUPPORTED_URLS[0]) || tab.url.startsWith('about:blank'))) {
@@ -108,6 +109,11 @@ function formatMediaTitle(title) {
 	for (let i = 0; i < URL_EXTRA.length; i++) {
 		if (title.endsWith(URL_EXTRA[i])) {
 			title = title.substring(0, title.indexOf(URL_EXTRA[i]));
+			
+			// Remove stream start date & time from NicoNico Live
+			if (i === 4) {
+				title = title.substring(0, title.lastIndexOf(' - '));
+			}
 		}
 	}
 	

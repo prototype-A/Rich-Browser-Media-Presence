@@ -1,7 +1,7 @@
 {
 	"name": "Rich Browser Media Presence",
 	"description": "Displays browser media as rich presence on your desktop Discord client",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"author": "prototype-A",
 	"manifest_version": 2,
 	"background": {
@@ -21,6 +21,9 @@
 		"tabs",
 		"webNavigation",
 		"https://www.youtube.com/watch?v=*",
-		"https://www.nicovideo.jp/watch/sm*"
+		"https://www.nicovideo.jp/watch/sm*",
+		"https://live.nicovideo.jp/watch/lv*",
+		"https://www.bilibili.com/video/*",
+		"https://live.bilibili.com/*"
 	]
 }

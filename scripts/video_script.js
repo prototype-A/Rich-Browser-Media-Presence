@@ -23,20 +23,16 @@ chrome.runtime.onConnect.addListener((port) => {
 				mediaStatusFeed = null;
 			} else {
 				let player = getPlayer();
-
-				if (player) {
-					let position = Math.round(player.currentTime);
-					let duration = Math.round(player.duration);
-					let playingState = (player.paused) ? 'paused': 'playing';
-					
+				
+				if (player.video) {
 					bgPort.postMessage({
 						title: getVideoTitle(),
 						chapter: getVideoChapter(),
 						platform: getVideoTitle(),
-						position: position,
-						duration: duration,
-						playingState: playingState,
-						isLive: getVideoLiveStatus()
+						position: Math.round(player.video.currentTime),
+						duration: Math.round(player.video.duration),
+						playingState: (player.video.paused) ? 'paused': 'playing',
+						isLive: player.isLive
 					});
 				}
 			}
@@ -44,17 +40,54 @@ chrome.runtime.onConnect.addListener((port) => {
 		
 		// Stop sending media status after disabling extension
 		bgPort.onDisconnect.addListener(() => {
-			bgPort = null;
+			console.log(`Disconnected from port "${bgPort.name}`);
 			connected = false;
-			console.log(`Disconnected from port "${portName}`);
+			bgPort = null;
 		});
 	}
 });
 
-// Returns the YT || NND video player element on the page
+// Returns the video player element on the page and
+// whether the video is currently live-streamed or not
 function getPlayer() {
-	return document.getElementsByClassName('video-stream')[0] ||
-		document.getElementsByClassName('MainVideoPlayer')[0].firstElementChild;
+	// NicoNicoDouga
+	try {
+		return {
+			video: document.getElementsByClassName('MainVideoPlayer')[0].firstElementChild,
+			isLive: false
+		}
+	} catch (error) {}
+	
+	// NicoNicoDouga Live
+	try {
+		return {
+			video: document.getElementsByClassName('___video-layer___1FNad ___ga-ns-video-layer___2iHmz ___video-layer___qLdFV')[0].firstElementChild.children[1],
+			isLive: true
+		}
+	} catch (error) {}
+	
+	// BiliBili
+	try {
+		return {
+			video: document.getElementsByClassName('bilibili-player-video')[0].firstElementChild,
+			isLive: false
+		}
+	} catch (error) {}
+	
+	// BiliBili Live
+	try {
+		return {
+			video: document.getElementsByClassName('bilibili-live-player-video')[0].firstElementChild,
+			isLive: true
+		}
+	} catch (error) {}
+	
+	// YouTube
+	let liveBadge = document.getElementsByClassName('ytp-live-badge')[0];
+	return {
+		video: document.getElementsByClassName('video-stream')[0],
+		isLive: liveBadge && !liveBadge.getAttribute('disabled')
+	};
 }
 
 // Returns the title of the video
@@ -67,12 +100,6 @@ function getVideoChapter() {
 	// YouTube
 	let chapter = document.querySelector('.ytp-chapter-title-content');
 	let chapterIsVisible = (chapter) ? window.getComputedStyle(chapter.parentElement.parentElement).display !== 'none' : false;
-	return (chapter && chapterIsVisible) ? chapter.textContent : null;
-}
 
-// Returns whether the video is currently live-streamed or not
-function getVideoLiveStatus() {
-	// YouTube
-	let liveBadge = document.querySelector('.ytp-live-badge');
-	return liveBadge && !liveBadge.getAttribute('disabled');
+	return (chapterIsVisible) ? chapter.textContent : null;
 }

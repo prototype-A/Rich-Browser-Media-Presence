@@ -126,7 +126,7 @@ function updateMediaStatus(newMediaInfo) {
 			updatePresence({
 				details: currMediaInfo.title,
 				state: `on ${currMediaInfo.platform}`,
-				startTimestamp: now,
+				startTimestamp: now - 4536,
 				smallImageKey: 'listeninglive',
 				smallImageText: 'Listening Live',
 				instance: true,
@@ -170,8 +170,11 @@ function updateMediaStatus(newMediaInfo) {
 
 // Update rich presence on Discord client
 function updatePresence(presence) {
-	presence.largeImageText = currMediaInfo.platform;
-	presence.largeImageKey = currMediaInfo.platform.toLowerCase();
+	// Remove " Live" if present to get correct large image key
+	let liveStringIndex = currMediaInfo.platform.indexOf(' Live')
+	let platformIconKey = (liveStringIndex !== -1) ? currMediaInfo.platform.substr(0, liveStringIndex) : currMediaInfo.platform;
+	presence.largeImageText = platformIconKey;
+	presence.largeImageKey = platformIconKey.toLowerCase();
 	
 	CLIENT.updatePresence(presence);
 };

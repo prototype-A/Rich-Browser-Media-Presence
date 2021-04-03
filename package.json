@@ -1,7 +1,7 @@
 {
 	"name": "rich-browser-media-presence",
 	"productName": "RichBrowserMediaPresence",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "Displays browser media as rich presence on your desktop Discord client",
 	"keywords": [],
 	"author": "prototype-A",
