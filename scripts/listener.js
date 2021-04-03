@@ -126,7 +126,7 @@ function updateMediaStatus(newMediaInfo) {
 			updatePresence({
 				details: currMediaInfo.title,
 				state: `on ${currMediaInfo.platform}`,
-				startTimestamp: now - 4536,
+				startTimestamp: now,
 				smallImageKey: 'listeninglive',
 				smallImageText: 'Listening Live',
 				instance: true,
