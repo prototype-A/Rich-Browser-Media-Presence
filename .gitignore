@@ -2,3 +2,4 @@ node_modules/
 icons/discord/
 build/
 *.ps1
+*.pdn
