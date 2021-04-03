@@ -5,11 +5,11 @@ Displays browser media as rich presence on your desktop Discord client
   
   
 ## List of Supported Videos
-* YouTube [https://www.youtube.com/watch?v=*]
-* NicoNicoDouga [https://www.nicovideo.jp/watch/sm*]
-* NicoNico Live [https://live.nicovideo.jp/watch/lv*]
-* BiliBili [https://www.bilibili.com/video/*]
-* BiliBili Live [https://live.bilibili.com/*]
+* YouTube `https://www.youtube.com/watch?v=*`
+* NicoNicoDouga `https://www.nicovideo.jp/watch/sm*`
+* NicoNico Live `https://live.nicovideo.jp/watch/lv*`
+* BiliBili `https://www.bilibili.com/video/*`
+* BiliBili Live `https://live.bilibili.com/*`
   
   
 ## Pre-Requisites
@@ -17,7 +17,7 @@ Displays browser media as rich presence on your desktop Discord client
 * Firefox or Chromium-based Web Browser
 	* Tested on Firefox 87.0 (64-bit)
 	* Tested on Google Chrome 89.0.4389.114 (Official Build)(64-bit)
-	* Should still work on slightly older versions as well
+	* Should still work on slightly older versions
   
   
 ## Installing the Browser Extension (Google Chrome)
@@ -36,7 +36,7 @@ This extension should work with any Chromium-based browser. However, it has only
 ## Running
 1. Download the listener binary for your OS
 2. Double-click the downloaded .exe (Windows) or execute the binary in a terminal (All OSes) to run the listener
-3. Navigate to a video on a [supported site](https://github.com/prototype-A/Rich-Browser-Media-Presence#list-of-supported-sites "Click this or scroll up to see the list of supported sites")
+3. Navigate to a video on a [supported site](https://github.com/prototype-A/Rich-Browser-Media-Presence#list-of-supported-videos "Click this or scroll up to see the list of supported sites")
 4. Click on the extension icon
 5. Click the "Enable for Current Tab" button  
   
