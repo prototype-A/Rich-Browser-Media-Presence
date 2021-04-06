@@ -8,16 +8,35 @@
 	</head>
 
 	<body>
+		<img id="mediaThumbnail" src="data:image/gif;base64,R0lGODlhAQABAPcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAEAAP8ALAAAAAABAAEAAAgEAP8FBAA7"/>
+			
 		<div class="popup-body">
-			<div>
-				Status: 
-				<span id="extensionStatus"></span>
+			<div class="top-div">
+				<div class="float-left" id="mediaPlatform">Platform</div>
+				<div class="float-right">
+					<span class="status-disabled" id="enabledStatus">Disabled</span>
+					<label class="toggle-switch">
+						<input type="checkbox" id="enableToggle">
+						<span class="slider"></span>
+					</label>
+				</div>
 			</div>
-			<div id="currentlyPlaying" hidden>
-				Playing:
-				<span id="playingStatus"></span>
+			
+			<div class="media-info">
+				<div class="centered-text" id="mediaTitle">Title</div>
+				<div class="centered-text">
+					<span id="mediaPosition">0:00</span>
+					<span id="playbackPosition">●</span>
+					<span id="playbackBar"> ━━━━━━━━━━━ </span>
+					<span id="mediaDuration">10:00:00</span>
+				</div>
+				<div class="centered-text">
+					<button class="media-control-button" id="rewindButton">⏪︎</button>
+					<button class="media-control-button" id="playButton">⏵︎</button>
+					<button class="media-control-button" id="fastforwardButton">⏩︎</button>
+					<button class="media-control-button" id="loopButton">🔁︎</button>
+				</div>
 			</div>
-			<button id="toggleBtn"></button>
 		</div>
 	</body>
 </html>
