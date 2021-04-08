@@ -1,33 +1,48 @@
-const BTN_ENABLE_TEXT = 'Enable for Current Tab';
-const BTN_DISABLE_TEXT = 'Disable';
+const THUMBNAIL_FADE = 'linear-gradient(to right, white, transparent 20%), linear-gradient(to bottom, white, transparent 30%)';
 const ENABLED_TEXT = 'Enabled';
 const DISABLED_TEXT = 'Disabled';
-const STATUS_GOOD_CLASS_NAME = 'status-good';
-const STATUS_BAD_CLASS_NAME = 'status-bad';
+const STATUS_ENABLED_CLASS_NAME = 'status-enabled';
+const STATUS_DISABLED_CLASS_NAME = 'status-disabled';
+const BUTTON_PRESSED_CLASS_NAME = 'button-on';
+const BUTTON_PLAY_TEXT = '⏵︎';
+const BUTTON_PAUSE_TEXT = '⏸';
+const POSITION_INDICATOR = '●';
+const POSITION_START = -0.15;
+const POSITION_END = 5.05;
+const SEEK_AMOUNT = 10;
 
 
 // Called every time popup is opened
 window.onload = () => {
-	var extensionStatus = document.getElementById('extensionStatus');
-	var currentlyPlaying = document.getElementById('currentlyPlaying');
-	var playingStatus = document.getElementById('playingStatus');
-	var toggleButton = document.getElementById('toggleBtn');
+	var toggle = document.getElementById('enableToggle');
+	var enabledStatus = document.getElementById('enabledStatus');
+	var mediaPlatform = document.getElementById('mediaPlatform');
+	var mediaTitle = document.getElementById('mediaTitle');
+	var mediaThumbnail = document.getElementById('mediaThumbnail');
 	
-	// Update extension popup while it is open when the video/chapter changes
-	var mediaUpdate = chrome.extension.getBackgroundPage().getContentScriptPort();
-	if (mediaUpdate) {
-		mediaUpdate.onMessage.addListener((message) => {
-			togglePlayingMedia(true, chrome.extension.getBackgroundPage().getCurrentlyPlaying());
-		});
-	}
+	var mediaUpdatePort = null;
+	var portUpdater = null;
+	var mediaPosition = document.getElementById('mediaPosition');
+	var playbackPosition = document.getElementById('playbackPosition');
+	var barPosition = POSITION_START;
+	var mediaDuration = document.getElementById('mediaDuration');
 	
-	toggleButton.onclick = () => {
+	var playBtn = document.getElementById('playButton');
+	var rwBtn = document.getElementById('rewindButton');
+	var ffBtn = document.getElementById('fastforwardButton');
+	var loopBtn = document.getElementById('loopButton');
+	
+	
+	// Switch toggled on/off
+	toggle.onclick = () => {
 		if (!chrome.extension.getBackgroundPage().isRichPresenceEnabled()) {
 			// Enable rich presence for current tab's media
-			chrome.extension.getBackgroundPage().enableRichPresence((playingMedia) => {
-				if (playingMedia) {
-					enable();
-					togglePlayingMedia(true, playingMedia);
+			chrome.extension.getBackgroundPage().enableRichPresence((mediaInfo) => {
+				if (mediaInfo) {
+					enable(mediaInfo);
+					startUpdates();
+				} else {
+					disable();
 				}
 			});
 		} else {
@@ -35,48 +50,198 @@ window.onload = () => {
 		}
 	}
 	
+	// Play button clicked
+	playBtn.onclick = () => {
+		let bg = chrome.extension.getBackgroundPage();
+		if (bg.isRichPresenceEnabled()) {
+			if (playBtn.textContent === BUTTON_PLAY_TEXT) {
+				playBtn.textContent = BUTTON_PAUSE_TEXT;
+				bg.togglePlayback(true);
+			} else {
+				playBtn.textContent = BUTTON_PLAY_TEXT;
+				bg.togglePlayback(false);
+			}
+		}
+	}
+	
+	// Rewind button clicked
+	rwBtn.onclick = (event) => {
+		let bg = chrome.extension.getBackgroundPage();
+		if (bg.isRichPresenceEnabled()) {
+			if (event.detail === 2) {
+				bg.seekPlayback(-SEEK_AMOUNT * 3);
+			} else if (event.detail == 1) {
+				bg.seekPlayback(-SEEK_AMOUNT);
+			}
+		}
+	};
+	
+	// Fast forward button clicked
+	ffBtn.onclick = (event) => {
+		let bg = chrome.extension.getBackgroundPage();
+		if (bg.isRichPresenceEnabled()) {
+			if (event.detail === 2) {
+				bg.seekPlayback(SEEK_AMOUNT * 3);
+			} else if (event.detail == 1) {
+				bg.seekPlayback(SEEK_AMOUNT);
+			}
+		}
+	};
+	
+	// Loop button clicked
+	loopBtn.onclick = () => {
+		let bg = chrome.extension.getBackgroundPage();
+		if (bg.isRichPresenceEnabled()) {
+			if (loopBtn.classList.contains(BUTTON_PRESSED_CLASS_NAME)) {
+				loopBtn.classList.remove(BUTTON_PRESSED_CLASS_NAME);
+				bg.toggleLooping(false);
+			} else {
+				loopBtn.classList.add(BUTTON_PRESSED_CLASS_NAME);
+				bg.toggleLooping(true);
+			}
+		}
+	}
+	
+	
+	// If rich presence is enabled when popup is opened
 	if (chrome.extension.getBackgroundPage().isRichPresenceEnabled()) {
-		togglePlayingMedia(true, chrome.extension.getBackgroundPage().getCurrentlyPlaying());
+		startUpdates();
 	} else {
-		// Initialize to disabled
+		// Rich presence disabled/initialize extension to disabled
 		disable();
 	}
 	
-	// Change status and button text to display as enabled
-	function enable() {
-		extensionStatus.textContent = ENABLED_TEXT;
-		extensionStatus.classList.remove(STATUS_BAD_CLASS_NAME);
-		extensionStatus.classList.add(STATUS_GOOD_CLASS_NAME);
+	// Update the extension popup when the video/chapter changes while it is open
+	function startUpdates() {
+		// Get current media info for instant first update
+		update();
 		
-		toggleButton.textContent = BTN_DISABLE_TEXT;
+		// Update the content script port every second for when the video changes
+		portUpdater = setInterval(function updateMedia() {
+			mediaUpdatePort = chrome.extension.getBackgroundPage().getContentScriptPort();
+			if (mediaUpdatePort) {
+				mediaUpdatePort.onMessage.addListener(update);
+			}
+			
+			return updateMedia;
+		}(), 1000);
+	}
+	
+	// Update the extension popup
+	function update() {
+		enable(chrome.extension.getBackgroundPage().getCurrentMedia());
+	}
+	
+	// Change status and button text to display as enabled
+	function enable(mediaInfo) {
+		toggle.checked = true;
+		
+		enabledStatus.textContent = ENABLED_TEXT;
+		enabledStatus.classList.remove(STATUS_DISABLED_CLASS_NAME);
+		enabledStatus.classList.add(STATUS_ENABLED_CLASS_NAME);
+		
+		updateMedia(mediaInfo);
 	}
 	
 	// Disable rich presence
 	function disable() {
 		chrome.extension.getBackgroundPage().disableRichPresence();
 		
-		extensionStatus.textContent = DISABLED_TEXT;
-		extensionStatus.classList.remove(STATUS_GOOD_CLASS_NAME);
-		extensionStatus.classList.add(STATUS_BAD_CLASS_NAME);
+		enabledStatus.textContent = DISABLED_TEXT;
+		enabledStatus.classList.remove(STATUS_ENABLED_CLASS_NAME);
+		enabledStatus.classList.add(STATUS_DISABLED_CLASS_NAME);
 		
-		togglePlayingMedia(false);
-		
-		toggleButton.textContent = BTN_ENABLE_TEXT;
+		updateMedia(null);
 	}
 	
-	// Show/hide currently-playing media <div>
-	function togglePlayingMedia(show, title) {
-		currentlyPlaying.hidden = !show;
+	// Updates the playing media info in the popup
+	function updateMedia(mediaInfo) {
+		//console.log(mediaInfo);
 		
-		if (!currentlyPlaying.hidden) {
-			if (title) {
-				playingStatus.textContent = title;
+		if (mediaInfo) {
+			// Update video thumbnail
+			mediaThumbnail.style.backgroundImage = THUMBNAIL_FADE + `, url("${mediaInfo.thumbnail}")`;
+			
+			// Update media platform
+			mediaPlatform.textContent = mediaInfo.platform;
+			
+			// Update media title
+			mediaTitle.textContent = (mediaInfo.chapter) ? `${mediaInfo.chapter} - ${mediaInfo.title}` : mediaInfo.title;
+			
+			// Update media position
+			mediaPosition.textContent = getTimeAsString(mediaInfo.position);
+			
+			// Update media playback position bar
+			let newPosition = POSITION_START + Math.round((Math.abs(POSITION_START - POSITION_END) * (mediaInfo.position / mediaInfo.duration)) * 100) / 100;
+			barPosition = newPosition;
+			playbackPosition.style.transform = `translateX(${barPosition}em)`;
+			
+			// Update media duration
+			mediaDuration.textContent = getTimeAsString(mediaInfo.duration);
+			
+			// Update play button
+			if (mediaInfo.paused) {
+				playBtn.textContent = BUTTON_PLAY_TEXT;
 			} else {
-				playingStatus.textContent = chrome.extension.getBackgroundPage().getCurrentlyPlaying();
+				playBtn.textContent = BUTTON_PAUSE_TEXT;
 			}
-			enable();
+			
+			// Update loop button
+			if (mediaInfo.isLooping) {
+				loopBtn.classList.add(BUTTON_PRESSED_CLASS_NAME);
+			} else {
+				loopBtn.classList.remove(BUTTON_PRESSED_CLASS_NAME);
+			}
 		} else {
-			playingStatus.textContent = '';
+			toggle.checked = false;
+			stopMediaUpdates();
+			mediaPlatform.textContent = 'Platform';
+			mediaThumbnail.style.backgroundImage = '';
+			mediaTitle.textContent = 'Title';
+			mediaPosition.textContent = '0:00';
+			mediaDuration.textContent = '0:00';
+			playbackPosition.style.transform = `translateX(${POSITION_START}em)`;
+			playBtn.textContent = BUTTON_PLAY_TEXT;
+			loopBtn.classList.remove(BUTTON_PRESSED_CLASS_NAME);
 		}
 	}
+	
+	
+	// When popup closes
+	document.addEventListener("visibilitychange", () => {
+		if (document.visibilityState !== 'visible') {
+			stopMediaUpdates();
+		}
+	});
+	
+	// Remove updater when popup closes to fix "Can't access dead object" errors
+	function stopMediaUpdates() {
+		if (mediaUpdatePort) {
+			mediaUpdatePort.onMessage.removeListener(update);
+		}
+		
+		if (portUpdater) {
+			clearInterval(portUpdater);
+			portUpdater = null;
+		}
+	}
+}
+
+// Returns the time as a string in the format hh:mm:ss from a number
+function getTimeAsString(time) {
+	if (isNaN(time)) {
+		return '0:00';
+	}
+	
+	let hh = Math.floor(time / 3600);
+	let mm = Math.floor(time / 60);
+	let ss = (time % 60).toLocaleString('en-US', { minimumIntegerDigits: 2, useGrouping:false });
+	
+	if (hh > 0) {
+		mm = (Math.floor(time / 60) - hh * 60).toLocaleString('en-US', { minimumIntegerDigits: 2, useGrouping:false });
+		
+		return `${hh}:${mm}:${ss}`;
+	}
+	
+	return `${mm}:${ss}`;
 }

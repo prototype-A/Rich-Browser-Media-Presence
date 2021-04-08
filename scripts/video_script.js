@@ -10,14 +10,8 @@ chrome.runtime.onConnect.addListener((port) => {
 		connected = true;
 		console.log(`Connected to port "${bgPort.name}"`);
 		
-		// Update extension popup
-		bgPort.postMessage({
-			title: getVideoTitle(),
-			chapter: getVideoChapter()
-		});
-		
 		// Send media status to extension every second
-		mediaStatusFeed = setInterval(() => {
+		mediaStatusFeed = setInterval(function sendMediaInfo() {
 			if (!connected) {
 				clearInterval(mediaStatusFeed);
 				mediaStatusFeed = null;
@@ -28,15 +22,34 @@ chrome.runtime.onConnect.addListener((port) => {
 					bgPort.postMessage({
 						title: getVideoTitle(),
 						chapter: getVideoChapter(),
-						platform: getVideoTitle(),
-						position: Math.round(player.video.currentTime),
-						duration: Math.round(player.video.duration),
-						playingState: (player.video.paused) ? 'paused': 'playing',
+						thumbnail: getVideoThumbnail(),
+						position: Math.floor(player.video.currentTime),
+						duration: Math.floor(player.video.duration),
+						paused: getVideoPaused(),
+						isLooping: getVideoLooping(),
 						isLive: player.isLive
 					});
 				}
 			}
-		}, 1000);
+			
+			return sendMediaInfo;
+		}(), 1000);
+		
+		// Received input from extension popup
+		bgPort.onMessage.addListener((command) => {
+			//console.log(command);
+			
+			if (command.hasOwnProperty('pause')) {
+				// Play/pause video
+				toggleVideoPlayback(!command.pause);
+			} else if (command.hasOwnProperty('loop')) {
+				// Set looping
+				toggleVideoLooping(command.loop);
+			} else if (command.hasOwnProperty('seek')) {
+				// Seek
+				getPlayer().video.currentTime += command.seek;
+			}
+		});
 		
 		// Stop sending media status after disabling extension
 		bgPort.onDisconnect.addListener(() => {
@@ -102,4 +115,103 @@ function getVideoChapter() {
 	let chapterIsVisible = (chapter) ? window.getComputedStyle(chapter.parentElement.parentElement).display !== 'none' : false;
 
 	return (chapterIsVisible) ? chapter.textContent : null;
+}
+
+// Returns the thumbnail of the video
+function getVideoThumbnail() {
+	// YouTube
+	let ytThumbnail = document.querySelector('[itemprop=thumbnailUrl]');
+	if (ytThumbnail) {
+		return ytThumbnail.href;
+	}
+	
+	// NicoNicoDouga
+	let nndVideoData = document.getElementById('js-initial-watch-data');
+	if (nndVideoData) {
+		let dataJson = JSON.parse(nndVideoData.dataset['apiData'].replace('&quot;', '"').replace('\/', '/'));
+		return dataJson.video.thumbnail.ogp;
+	}
+	
+	// NicoNico Live
+	let nndliveThumbnail = document.querySelector('[property=og:image]');
+	if (nndliveThumbnail) {
+		return nndliveThumbnail.content;
+	}
+	
+	// BiliBili
+	let bbThumbnail = document.querySelector('[itemprop=thumbnailUrl]');
+	if (bbThumbnail) {
+		return bbThumbnail.content;
+	}
+	
+	// BiliBili Live
+	return '';
+}
+
+// Returns whether the video is playing or paused
+function getVideoPaused() {
+	// NicoNicoDouga
+	let nndPlayBtn = getNNDPlayButton();
+	if (nndPlayBtn) {
+		return nndPlayBtn.classList.contains('PlayerPlayButton');
+	}
+	
+	return getPlayer().video.paused;
+}
+
+// Returns whether the video is set to loop or not
+function getVideoLooping() {
+	// NicoNicoDouga
+	let nndRepeatBtn = getNNDRepeatButton();
+	if (nndRepeatBtn) {
+		return nndRepeatBtn.classList.contains('PlayerRepeatOffButton');
+	}
+	
+	return getPlayer().video.loop;
+}
+
+// Gets the play button element from the NicoNicoDouga page
+function getNNDPlayButton() {
+	return document.getElementsByClassName('ActionButton ControllerButton PlayerPauseButton')[0] ||
+			document.getElementsByClassName('ActionButton ControllerButton PlayerPlayButton')[0];
+}
+
+// Gets the repeat button element from the NicoNicoDouga page
+function getNNDRepeatButton() {
+	return document.getElementsByClassName('ActionButton ControllerButton PlayerRepeatOnButton')[0] ||
+			document.getElementsByClassName('ActionButton ControllerButton PlayerRepeatOffButton')[0];
+}
+
+// Plays/pauses the video
+function toggleVideoPlayback(play) {
+	// NicoNicoDouga
+	let nndPlayBtn = getNNDPlayButton();
+	if (nndPlayBtn &&
+		(nndPlayBtn.classList.contains('PlayerPauseButton') && !play ||
+		nndPlayBtn.classList.contains('PlayerPlayButton') && play)) {
+		nndPlayBtn.click();
+	} else {
+		// Other
+		let video = getPlayer().video;
+		
+		if (play) {
+			video.play();
+		} else {
+			video.pause();
+		}
+	}
+}
+
+// Toggles whether the video should loop or not
+function toggleVideoLooping(loop) {
+	// NicoNicoDouga
+	let nndRepeatBtn = getNNDRepeatButton();
+	
+	if (nndRepeatBtn &&
+		(nndRepeatBtn.classList.contains('PlayerRepeatOnButton') && loop ||
+		nndRepeatBtn.classList.contains('PlayerRepeatOffButton') && !loop)) {
+		nndRepeatBtn.click();
+	} else {
+		getPlayer().video.loop = loop;
+	}
 }

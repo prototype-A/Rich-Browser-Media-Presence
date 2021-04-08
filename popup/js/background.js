@@ -10,8 +10,7 @@ var csPort = null;
 var richPresenceEnabled = false;
 var enabledTabId = -1;
 var injectedTabs = [];
-var currentMediaTitle = '';
-var currentMediaChapter = '';
+var currentMedia = null;
 
 var xhr = new XMLHttpRequest();
 
@@ -19,12 +18,12 @@ var xhr = new XMLHttpRequest();
 // Injects the content script into the specified tab
 function injectContentScript(tabId, callback) {
 	chrome.tabs.executeScript(tabId, { file: '/scripts/video_script.js' }, () => {
-		connectToContentScripts(tabId, callback);
+		connectToContentScript(tabId, callback);
 	});
 }
 
 // Establishes a connection to the content script injected into the specified tab
-function connectToContentScripts(tabId, callback) {
+function connectToContentScript(tabId, callback) {
 	let portName = CS_PORT_NAME + `Tab${tabId}`;
 	
 	// Connect to injected content script in tab
@@ -32,16 +31,18 @@ function connectToContentScripts(tabId, callback) {
 	
 	// Listen for messages from content script
 	csPort.onMessage.addListener((message) => {
-		if (message.playingState) {
-			sendMediaInfo(message);
-		} else {
-			updatePopupMediaInfo(message);
-			callback(getCurrentlyPlaying());
+		sendMediaInfo(message);
+		
+		if (callback) {
+			try {
+				callback(getCurrentMedia());
+			} catch (error) {}
+			callback = null;
 		}
 	});
 }
 
-// Enables rich presence for current tab
+// Enables rich presence for the current tab
 function enableRichPresence(callback) {
 	chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
 		// Check if url is supported
@@ -55,20 +56,40 @@ function enableRichPresence(callback) {
 					injectedTabs.push(tabId);
 					injectContentScript(tabId, callback);
 					
-					// Re-inject content script if user navigated to a new webpage
-					// using traditional non push-based web browser navigation
+					// Detect history state update for push-based navigation
+					chrome.webNavigation.onHistoryStateUpdated.addListener((tab) => {
+						//console.log('! ' + tab.url);
+						
+						// Refresh the enabled tab to obtain new thumbnail data
+						if (tab.tabId === tabId) {
+							chrome.tabs.reload(tabId);
+						}
+					});
+					
+					// Detect if user navigated to a new webpage with browser navigation
 					chrome.webNavigation.onCompleted.addListener((tab) => {
 						//console.log(tab.url);
 						
-						// Only inject if same tab and not a YouTube link
-						// New url will be 'about:blank' when playing the "up next" YouTube video
-						if (tab.tabId === tabId && !(tab.url.startsWith(SUPPORTED_URLS[0]) || tab.url.startsWith('about:blank'))) {
+						// Re-inject content script if it was the same tab as the current tab
+						if (tab.tabId === tabId) {
 							injectContentScript(tabId, callback);
+						}
+					});
+					
+					// Detect when a tab is closed
+					chrome.tabs.onRemoved.addListener((closedTabId, removeInfo) => {
+						// If the enabled tab is closed
+						if (closedTabId === tabId) {
+							// Disable rich presence
+							disableRichPresence();
+							
+							// Remove the tab id from the list of injected tabs
+							injectedTabs.splice(closedTabId, 1);
 						}
 					});
 				} else {
 					// Content script already/still injected
-					connectToContentScripts(tabId, callback);
+					connectToContentScript(tabId, callback);
 				}
 				
 				richPresenceEnabled = true;
@@ -80,6 +101,7 @@ function enableRichPresence(callback) {
 		
 		console.error('This URL is not supported.');
 		callback(null);
+		
 		return;
 	});
 }
@@ -92,16 +114,63 @@ function disableRichPresence() {
 	}
 	
 	richPresenceEnabled = false;
-	//injectedTabs.splice(enabledTabId, 1);
 	enabledTabId = -1;
-	currentMediaTitle = '';
-	currentMediaChapter = '';
+	currentMedia = null;
+}
+
+
+// Returns true/false whether rich presence is currently enabled for a tab
+function isRichPresenceEnabled() {
+	return richPresenceEnabled;
+}
+
+// Returns the id of the tab that rich presence is currently enabled on
+function getEnabledTabId() {
+	return enabledTabId;
 }
 
 // Returns the content script port used to obtain updates for the playing media
 function getContentScriptPort() {
 	return csPort;
 }
+
+// Returns info of the media that is currently playing
+function getCurrentMedia() {
+	if (currentMedia) {
+		return currentMedia;
+	}
+	
+	return null;
+}
+
+
+// Play/pause the video
+function togglePlayback(play) {
+	if (isRichPresenceEnabled()) {
+		csPort.postMessage({
+			pause: !play
+		});
+	}
+}
+
+// Seek forward/backward
+function seekPlayback(seek) {
+	if (isRichPresenceEnabled()) {
+		csPort.postMessage({
+			seek: seek
+		});
+	}
+}
+
+// Toggle video looping
+function toggleLooping(loop) {
+	if (isRichPresenceEnabled()) {
+		csPort.postMessage({
+			loop: loop
+		});
+	}
+}
+
 
 // Formats media title for display, removing unnecessary substrings from the title
 function formatMediaTitle(title) {
@@ -149,25 +218,29 @@ function isSupportedPlatform(url) {
 	return false;
 }
 
+
 // Update media info to be displayed on popup
 function updatePopupMediaInfo(info) {
-	currentMediaTitle = formatMediaTitle(info.title);
-	currentMediaChapter = info.chapter;
+	currentMedia = {
+		title: formatMediaTitle(info.title),
+		chapter: info.chapter,
+		platform: getPlatform(info.title),
+		thumbnail: info.thumbnail,
+		position: info.position,
+		duration: info.duration,
+		paused: info.paused,
+		isLooping: info.isLooping,
+		isLive: info.isLive
+	}
 }
 
 // Sends media data from browser extension to running listener script
 function sendMediaInfo(info) {
 	if (enabledTabId !== -1 && info) {
-		//console.log(info);
-		
-		// Set video platform
-		info.platform = getPlatform(info.title);
-		
-		// Format title
-		info.title = formatMediaTitle(info.title);
-		
 		// Update info to be displayed in popup
 		updatePopupMediaInfo(info);
+		
+		//console.log(currentMedia);
 		
 		// Send media info to listener
 		xhr.open('POST', `http://${LISTENER_SERVER}:${LISTENER_PORT}`);
@@ -175,20 +248,6 @@ function sendMediaInfo(info) {
 		xhr.onerror = () => {
 			console.error('Failed to connect to listener.');
 		}
-		xhr.send(JSON.stringify(info));
+		xhr.send(JSON.stringify(currentMedia));
 	}
-}
-
-// Returns true/false whether rich presence is currently enabled for a tab
-function isRichPresenceEnabled() {
-	return richPresenceEnabled;
-}
-
-// Returns the title of the media that is currently playing
-function getCurrentlyPlaying() {
-	if (currentMediaChapter) {
-		return `${currentMediaChapter} - ${currentMediaTitle}`;
-	}
-	
-	return `${currentMediaTitle}`;
 }

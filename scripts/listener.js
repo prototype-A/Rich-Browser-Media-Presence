@@ -38,7 +38,7 @@ app.post('/', express.json({ type: '*/*' }), (req, res) => {
 		platform: req.body.platform,
 		position: req.body.position,
 		duration: req.body.duration,
-		state: req.body.playingState,
+		state: (req.body.paused) ? 'paused' : 'playing',
 		isLive: req.body.isLive
 	};
 	
