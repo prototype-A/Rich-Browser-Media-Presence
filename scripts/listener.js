@@ -20,7 +20,7 @@ var currMediaInfo = {
 var playback;
 
 
-console.log('\nLaunching listener');
+console.log('\nLaunching listener...');
 
 // CORS to allow connection from "Origin: *"
 app.use(cors());
@@ -28,7 +28,7 @@ app.use(cors());
 // Enable CORS Pre-Flight request
 app.options('/', cors());
 
-// Handle incoming POST requests from extension
+// Handle incoming POST requests from browser extension
 app.post('/', express.json({ type: '*/*' }), (req, res) => {
 	//console.log(req.body);
 	
@@ -44,13 +44,13 @@ app.post('/', express.json({ type: '*/*' }), (req, res) => {
 	
 	updateMediaStatus(newMediaInfo);
 	
-	
 	res.end();
 });
 
 // Start listening
 app.listen(PORT, SERVER, () => {
-	console.log(`Listening at http://${SERVER}:${PORT}\n`);
+	//console.log(`Listening at http://${SERVER}:${PORT}\n`);
+	console.log('Ready\n');
 });
 
 // Handle updating status
@@ -66,11 +66,13 @@ function updateMediaStatus(newMediaInfo) {
 			smallImageText: 'Stopped',
 			instance: false,
 		});
-	} else if (currMediaInfo.state !== newMediaInfo.state && currMediaInfo.title === newMediaInfo.title) {
+	} else if (currMediaInfo.state !== newMediaInfo.state &&
+				currMediaInfo.title === newMediaInfo.title) {
+		currMediaInfo = newMediaInfo;
+		
 		// Ignore 'paused' state when queueing next song
 		if (newMediaInfo.position !== newMediaInfo.duration && newMediaInfo.state === 'paused') {
 			// Playback paused
-			currMediaInfo = newMediaInfo;
 			pausePlayback();
 			console.log(`Paused:【${formatPlayingTitle(currMediaInfo)}】 on ${currMediaInfo.platform}`);
 			
@@ -83,7 +85,6 @@ function updateMediaStatus(newMediaInfo) {
 			});
 		} else if (newMediaInfo.state === 'playing') {
 			// Playback resumed
-			currMediaInfo = newMediaInfo;
 			startPlayback();
 			console.log(`Resumed:【${formatPlayingTitle(currMediaInfo)}】 on ${currMediaInfo.platform}`);
 			
@@ -115,10 +116,11 @@ function updateMediaStatus(newMediaInfo) {
 				currMediaInfo.platform !== newMediaInfo.platform ||
 				(currMediaInfo.duration !== newMediaInfo.duration &&
 				currMediaInfo.title !== newMediaInfo.title)) {
+		currMediaInfo = newMediaInfo;
+		
 		// New video/chapter
 		if (newMediaInfo.isLive) {
 			// Listening live
-			currMediaInfo = newMediaInfo;
 			currMediaInfo.position = 0;
 			currMediaInfo.duration = -1;
 			console.log(`Now listening live to:【${currMediaInfo.title}】 on ${currMediaInfo.platform}`);
@@ -132,7 +134,6 @@ function updateMediaStatus(newMediaInfo) {
 				instance: true,
 			});
 		} else if (newMediaInfo.state === 'playing') {
-			currMediaInfo = newMediaInfo;
 			console.log(`Now listening to:【${formattedTitle}】 on ${currMediaInfo.platform}`);
 			
 			updatePresence({
@@ -149,12 +150,13 @@ function updateMediaStatus(newMediaInfo) {
 		startPlayback();
 	} else if (currMediaInfo.title === newMediaInfo.title &&
 				Math.abs(currMediaInfo.position - newMediaInfo.position) >= 3 &&
-				!currMediaInfo.isLive) {
+				!currMediaInfo.isLive &&
+				currMediaInfo.state !== 'paused') {
 		// Update playback position after seeking
 		currMediaInfo.position = newMediaInfo.position;
-		let mm = Math.floor(newMediaInfo.position / 60);
-		let ss = (newMediaInfo.position % 60).toLocaleString('en-US', { minimumIntegerDigits: 2, useGrouping:false });
-		console.log(`Seek 【${currMediaInfo.title}】 on ${currMediaInfo.platform} to ${mm}:${ss}`);
+		
+		let newTime = getTimeAsString(currMediaInfo.position);
+		console.log(`Seek 【${currMediaInfo.title}】 on ${currMediaInfo.platform} to ${newTime}`);
 		
 		updatePresence({
 			details: formattedTitle,
@@ -172,7 +174,9 @@ function updateMediaStatus(newMediaInfo) {
 function updatePresence(presence) {
 	// Remove " Live" if present to get correct large image key
 	let liveStringIndex = currMediaInfo.platform.indexOf(' Live')
-	let platformIconKey = (liveStringIndex !== -1) ? currMediaInfo.platform.substr(0, liveStringIndex) : currMediaInfo.platform;
+	let platformIconKey = (liveStringIndex !== -1) ?
+							currMediaInfo.platform.substr(0, liveStringIndex) :
+							currMediaInfo.platform;
 	presence.largeImageText = platformIconKey;
 	presence.largeImageKey = platformIconKey.toLowerCase();
 	
@@ -191,11 +195,13 @@ function formatPlayingTitle(mediaInfo) {
 // Start updating playback position locally
 function startPlayback() {
 	if (!playback) {
-		playback = setInterval(() => {
+		playback = setInterval(function updateBar() {
 			if (currMediaInfo.position < currMediaInfo.duration) {
 				currMediaInfo.position++;
 			}
-		}, 1000);
+			
+			return updateBar;
+		}(), 1000);
 	}
 }
 
@@ -203,6 +209,25 @@ function startPlayback() {
 function pausePlayback() {
 	clearInterval(playback);
 	playback = null;
+}
+
+// Returns the time as a string in the format hh:mm:ss from a number
+function getTimeAsString(time) {
+	if (isNaN(time)) {
+		return '0:00';
+	}
+	
+	let hh = Math.floor(time / 3600);
+	let mm = Math.floor(time / 60);
+	let ss = (time % 60).toLocaleString('en-US', { minimumIntegerDigits: 2, useGrouping:false });
+	
+	if (hh > 0) {
+		mm = (Math.floor(time / 60) - hh * 60).toLocaleString('en-US', { minimumIntegerDigits: 2, useGrouping:false });
+		
+		return `${hh}:${mm}:${ss}`;
+	}
+	
+	return `${mm}:${ss}`;
 }
 
 // Get current epoch time
