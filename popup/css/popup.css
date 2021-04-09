@@ -105,9 +105,12 @@ input:checked + .slider::before {
 /* Video Thumbnail */
 #mediaThumbnail {
 	background: linear-gradient(to right, white, transparent 20%), linear-gradient(to bottom, white, transparent 30%), url("https://i.ytimg.com/vi/TbdZiu3Rarw/maxresdefault.jpg") center;
+	/*background: url("https://i.ytimg.com/vi/TbdZiu3Rarw/maxresdefault.jpg") center;*/
+	background-blend-mode: lighten, lighten;
 	background-position: center;
 	background-repeat: no-repeat;
 	background-size: cover;
+	/*box-shadow: 1em 1em 2em 1em white inset;*/
 	position: absolute;
 	width: 16em;
 	height: 100%;
