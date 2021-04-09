@@ -119,10 +119,10 @@ function getVideoChapter() {
 
 // Returns the thumbnail of the video
 function getVideoThumbnail() {
-	// YouTube
-	let ytThumbnail = document.querySelector('[itemprop=thumbnailUrl]');
-	if (ytThumbnail) {
-		return ytThumbnail.href;
+	// YouTube/BiliBili
+	let thumbnail = document.querySelector('[itemprop=thumbnailUrl]');
+	if (thumbnail) {
+		return thumbnail.href || thumbnail.content;
 	}
 	
 	// NicoNicoDouga
@@ -136,12 +136,6 @@ function getVideoThumbnail() {
 	let nndliveThumbnail = document.querySelector('[property=og:image]');
 	if (nndliveThumbnail) {
 		return nndliveThumbnail.content;
-	}
-	
-	// BiliBili
-	let bbThumbnail = document.querySelector('[itemprop=thumbnailUrl]');
-	if (bbThumbnail) {
-		return bbThumbnail.content;
 	}
 	
 	// BiliBili Live
