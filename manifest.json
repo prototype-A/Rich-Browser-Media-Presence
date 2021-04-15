@@ -8,7 +8,7 @@
 		"page": "/popup/background.html"
 	},
 	"browser_action": {
-		"browser_style": true,
+		"browser_style": false,
 		"default_icon": "/icons/icon_red.png",
 		"default_popup": "/popup/popup.html"
 	},

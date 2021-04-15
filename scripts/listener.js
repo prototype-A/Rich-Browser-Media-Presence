@@ -22,8 +22,6 @@ var currMediaInfo = {
 var positionUpdater;
 
 
-console.log('\nLaunching listener...');
-
 // CORS to allow connection from "Origin: *"
 app.use(cors());
 
@@ -49,10 +47,8 @@ app.post('/', express.json({ type: '*/*' }), (req, res) => {
 	res.end();
 });
 
-// Start listening
+// Start listening to requests
 app.listen(PORT, SERVER, () => {
-	//console.log(`Listening at http://${SERVER}:${PORT}\n`);
-	console.log('Ready\n');
 	displayPlayback();
 });
 

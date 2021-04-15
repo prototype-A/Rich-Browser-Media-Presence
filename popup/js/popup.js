@@ -6,9 +6,9 @@ const STATUS_DISABLED_CLASS_NAME = 'status-disabled';
 const BUTTON_PRESSED_CLASS_NAME = 'button-on';
 const BUTTON_PLAY_TEXT = '⏵︎';
 const BUTTON_PAUSE_TEXT = '⏸';
+const PLAYBACK_BAR = '━━━━━━━━━━━';
 const POSITION_INDICATOR = '●';
-const POSITION_START = -0.15;
-const POSITION_END = 5.05;
+const POSITION_START = -0.14;
 const SEEK_AMOUNT = 10;
 
 
@@ -24,8 +24,8 @@ window.onload = () => {
 	var portUpdater = null;
 	var mediaPosition = document.getElementById('mediaPosition');
 	var playbackPosition = document.getElementById('playbackPosition');
-	var barPosition = POSITION_START;
 	var mediaDuration = document.getElementById('mediaDuration');
+	var playbackBar = document.getElementById('playbackBar');
 	
 	var playBtn = document.getElementById('playButton');
 	var rwBtn = document.getElementById('rewindButton');
@@ -172,9 +172,8 @@ window.onload = () => {
 			mediaPosition.textContent = getTimeAsString(mediaInfo.position);
 			
 			// Update media playback position bar
-			let newPosition = POSITION_START + Math.round((Math.abs(POSITION_START - POSITION_END) * (mediaInfo.position / mediaInfo.duration)) * 100) / 100;
-			barPosition = newPosition;
-			playbackPosition.style.transform = `translateX(${barPosition}em)`;
+			let newPosition = POSITION_START + Math.round((0.0366 * playbackBar.offsetWidth * (mediaInfo.position / mediaInfo.duration)) * 100) / 100;
+			playbackPosition.style.transform = `translateX(${newPosition}em)`;
 			
 			// Update media duration
 			mediaDuration.textContent = getTimeAsString(mediaInfo.duration);
