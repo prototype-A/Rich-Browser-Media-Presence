@@ -184,6 +184,11 @@ function updatePresence(presence) {
 	presence.largeImageText = platformIconKey;
 	presence.largeImageKey = platformIconKey.toLowerCase();
 	
+	// 128 character limit
+	if (presence.details.length > 128) {
+		presence.details = presence.details.substr(0, 128);
+	}
+	
 	CLIENT.updatePresence(presence);
 };
 
