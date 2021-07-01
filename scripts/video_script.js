@@ -45,8 +45,11 @@ chrome.runtime.onConnect.addListener((port) => {
 			} else if (command.hasOwnProperty('loop')) {
 				// Set looping
 				toggleVideoLooping(command.loop);
+			} else if (command.hasOwnProperty('seekPos')) {
+				// Seek increment
+				getPlayer().video.currentTime = command.seekPos;
 			} else if (command.hasOwnProperty('seek')) {
-				// Seek
+				// Seek increment
 				getPlayer().video.currentTime += command.seek;
 			}
 		});

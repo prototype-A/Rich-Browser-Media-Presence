@@ -8,8 +8,11 @@ const BUTTON_PLAY_TEXT = '⏵︎';
 const BUTTON_PAUSE_TEXT = '⏸';
 const PLAYBACK_BAR = '━━━━━━━━━━━';
 const POSITION_INDICATOR = '●';
-const POSITION_START = -0.14;
+const POSITION_START_EM = -0.14;
 const SEEK_AMOUNT = 10;
+const CLIENTX_SHIFT = 130;
+const BAR_LEFT_SPACE_PX = 2;
+const BAR_RIGHT_SPACE_PX = 6;
 
 
 // Called every time popup is opened
@@ -26,6 +29,7 @@ window.onload = () => {
 	var playbackPosition = document.getElementById('playbackPosition');
 	var mediaDuration = document.getElementById('mediaDuration');
 	var playbackBar = document.getElementById('playbackBar');
+	var dragging = false;
 	
 	var playBtn = document.getElementById('playButton');
 	var rwBtn = document.getElementById('rewindButton');
@@ -132,13 +136,18 @@ window.onload = () => {
 		enable(chrome.extension.getBackgroundPage().getCurrentMedia());
 	}
 	
-	// Change status and button text to display as enabled
+	// Change status, enable buttons and toggle switch text to display as enabled
 	function enable(mediaInfo) {
 		toggle.checked = true;
 		
 		enabledStatus.textContent = ENABLED_TEXT;
 		enabledStatus.classList.remove(STATUS_DISABLED_CLASS_NAME);
 		enabledStatus.classList.add(STATUS_ENABLED_CLASS_NAME);
+		
+		playBtn.disabled = false;
+		rwBtn.disabled = false;
+		ffBtn.disabled = false;
+		loopBtn.disabled = false;
 		
 		updateMedia(mediaInfo);
 	}
@@ -150,6 +159,11 @@ window.onload = () => {
 		enabledStatus.textContent = DISABLED_TEXT;
 		enabledStatus.classList.remove(STATUS_ENABLED_CLASS_NAME);
 		enabledStatus.classList.add(STATUS_DISABLED_CLASS_NAME);
+		
+		playBtn.disabled = true;
+		rwBtn.disabled = true;
+		ffBtn.disabled = true;
+		loopBtn.disabled = true;
 		
 		updateMedia(null);
 	}
@@ -172,8 +186,10 @@ window.onload = () => {
 			mediaPosition.textContent = getTimeAsString(mediaInfo.position);
 			
 			// Update media playback position bar
-			let newPosition = POSITION_START + Math.round((0.0366 * playbackBar.offsetWidth * (mediaInfo.position / mediaInfo.duration)) * 100) / 100;
-			playbackPosition.style.transform = `translateX(${newPosition}em)`;
+			if (!dragging) {
+				let newPosition = POSITION_START_EM + Math.round((0.0366 * playbackBar.offsetWidth * (mediaInfo.position / mediaInfo.duration)) * 100) / 100;
+				playbackPosition.style.transform = `translateX(${newPosition}em)`;
+			}
 			
 			// Update media duration
 			mediaDuration.textContent = getTimeAsString(mediaInfo.duration);
@@ -199,7 +215,7 @@ window.onload = () => {
 			mediaTitle.textContent = 'Title';
 			mediaPosition.textContent = '0:00';
 			mediaDuration.textContent = '0:00';
-			playbackPosition.style.transform = `translateX(${POSITION_START}em)`;
+			playbackPosition.style.transform = `translateX(${POSITION_START_EM}em)`;
 			playBtn.textContent = BUTTON_PLAY_TEXT;
 			loopBtn.classList.remove(BUTTON_PRESSED_CLASS_NAME);
 		}
@@ -207,7 +223,7 @@ window.onload = () => {
 	
 	
 	// When popup closes
-	document.addEventListener("visibilitychange", () => {
+	document.addEventListener('visibilitychange', () => {
 		if (document.visibilityState !== 'visible') {
 			stopMediaUpdates();
 		}
@@ -224,6 +240,56 @@ window.onload = () => {
 			portUpdater = null;
 		}
 	}
+	
+	// Started dragging playback position indicator
+	playbackPosition.addEventListener('mousedown', (event) => {
+		if (chrome.extension.getBackgroundPage().isRichPresenceEnabled()) {
+			dragging = true;
+		}
+	});
+	
+	// Dragging playback position indicator
+	document.addEventListener('mousemove', (event) => {
+		if (chrome.extension.getBackgroundPage().isRichPresenceEnabled() && dragging) {
+			let currX = event.clientX - CLIENTX_SHIFT;
+			let barBounds = playbackBar.getBoundingClientRect();
+			
+			// Constrain to playback bar width
+			let barLeft = barBounds.left - CLIENTX_SHIFT + BAR_LEFT_SPACE_PX;
+			let barRight = barBounds.right - CLIENTX_SHIFT - BAR_RIGHT_SPACE_PX;
+			if (currX < barLeft) {
+				currX = barLeft;
+			} else if (currX > barRight) {
+				currX = barRight;
+			}
+			
+			playbackPosition.style.transform = `translateX(${currX}px)`;
+		}
+	});
+	
+	// Stoped dragging playback position indicator
+	document.addEventListener('mouseup', () => {
+		// Check if was previously dragging playback position indicator
+		let wasDragging = false;
+		if (chrome.extension.getBackgroundPage().isRichPresenceEnabled() && dragging) {
+			wasDragging = true;
+		}
+		dragging = false;
+		
+		// Seek to position
+		if (wasDragging) {
+			let barBounds = playbackBar.getBoundingClientRect();
+			let transformMatrix = window.getComputedStyle(playbackPosition).transform.match(/matrix.*\((.+)\)/)[1].split(', ');
+			let barLeft = Math.round(Math.abs(barBounds.left - CLIENTX_SHIFT) * 10000) / 10000;
+			let currPosition = parseFloat(transformMatrix[4]) + barLeft - BAR_LEFT_SPACE_PX;
+			let barWidth = playbackBar.offsetWidth - BAR_LEFT_SPACE_PX - BAR_RIGHT_SPACE_PX;
+
+			let currMediaInfo = chrome.extension.getBackgroundPage().getCurrentMedia();
+			let seekTime = Math.round(currPosition / barWidth * currMediaInfo.duration);
+
+			chrome.extension.getBackgroundPage().seekPosition(seekTime);
+		}
+	});
 }
 
 // Returns the time as a string in the format hh:mm:ss from a number

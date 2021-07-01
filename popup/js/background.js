@@ -153,7 +153,16 @@ function togglePlayback(play) {
 	}
 }
 
-// Seek forward/backward
+// Seek to specific playback position
+function seekPosition(pos) {
+	if (isRichPresenceEnabled()) {
+		csPort.postMessage({
+			seekPos: pos
+		});
+	}
+}
+
+// Seek forward/backward a set increment
 function seekPlayback(seek) {
 	if (isRichPresenceEnabled()) {
 		csPort.postMessage({

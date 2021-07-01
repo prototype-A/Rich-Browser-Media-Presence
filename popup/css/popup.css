@@ -151,6 +151,7 @@ input:checked + .slider::before {
 #playbackBar {
 	display: inline-block;
 	font-family: "Courier New", Courier, monospace;
+	user-select: none;
 }
 
 /* Playback Position Indicator */
@@ -158,6 +159,7 @@ input:checked + .slider::before {
 	display: inline-block;
 	position: absolute;
 	transform: translateX(-0.14em);
+	user-select: none;
 }
 
 
@@ -176,9 +178,9 @@ input:checked + .slider::before {
 	-webkit-transition: .15s;
 	transition: .15s;
 }
-.media-control-button:hover {
+.media-control-button:hover:enabled {
 	background-color: #ccc;
 }
-.media-control-button:active, .button-on {
+.media-control-button:active:enabled, .button-on {
 	background-color: #888;
 }
